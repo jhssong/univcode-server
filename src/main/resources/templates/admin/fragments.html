@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<header th:fragment="nav()">
+  <style>
+    .admin-header { background:#fff; border-bottom:1px solid #e5e7eb; padding:0 32px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; }
+    .admin-header .brand { font-size:15px; font-weight:700; color:#111; }
+    .admin-header .right { display:flex; align-items:center; gap:12px; }
+    .admin-header form button { padding:7px 14px; border:1px solid #ddd; background:#fff; border-radius:6px; font-size:13px; cursor:pointer; }
+    .admin-header form button:hover { background:#f3f4f6; }
+  </style>
+  <div class="admin-header">
+    <span class="brand">UnivCode 관리자</span>
+    <div class="right">
+      <form method="post" action="/admin/logout">
+        <button type="submit">로그아웃</button>
+      </form>
+    </div>
+  </div>
+</header>
+
+</body>
+</html>

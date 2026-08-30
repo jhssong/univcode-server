@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UnivCode 관리자</title>
+  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f5f5f5; color:#111; }
+    main { max-width:1080px; margin:40px auto; padding:0 24px; display:flex; flex-direction:column; gap:24px; }
+    h2 { font-size:18px; font-weight:700; margin-bottom:16px; }
+    .stats { display:flex; gap:16px; }
+    .stat { background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); padding:24px 28px; flex:1; }
+    .stat .label { font-size:12px; color:#6b7280; font-weight:500; margin-bottom:8px; }
+    .stat .value { font-size:32px; font-weight:700; }
+    .stat.green .value { color:#16a34a; }
+    .stat.blue .value { color:#2563eb; }
+    .stat.red .value { color:#dc2626; }
+    .subheading { font-size:14px; font-weight:600; color:#374151; margin-bottom:12px; }
+    .stat-note { color:#9ca3af; font-size:13px; background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); padding:20px 28px; }
+    section { background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); padding:28px; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .section-title { font-size:14px; font-weight:600; color:#374151; }
+    .btn-add { padding:6px 14px; border:1px solid #6366f1; background:#fff; color:#4f46e5; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500; }
+    .btn-add:hover { background:#eef2ff; }
+    .add-form { background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:20px; margin-bottom:20px; display:none; }
+    .form-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .form-row input { flex:1; min-width:180px; padding:8px 10px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; background:#fff; }
+    .form-row input:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 2px #eef2ff; }
+    .form-row textarea { flex:1; min-width:280px; min-height:90px; padding:8px 10px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; background:#fff; font-family:inherit; resize:vertical; }
+    .form-row textarea:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 2px #eef2ff; }
+    .form-actions { display:flex; gap:8px; margin-top:12px; }
+    .btn-primary { padding:7px 16px; background:#4f46e5; color:#fff; border:none; border-radius:5px; font-size:13px; cursor:pointer; font-weight:500; }
+    .btn-primary:hover { background:#4338ca; }
+    .btn-cancel { padding:7px 14px; background:#fff; color:#6b7280; border:1px solid #d1d5db; border-radius:5px; font-size:13px; cursor:pointer; }
+    .btn-cancel:hover { background:#f3f4f6; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th { text-align:left; padding:10px 12px; font-size:12px; font-weight:600; color:#6b7280; border-bottom:1px solid #e5e7eb; }
+    td { padding:12px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    .btn-delete { padding:5px 10px; border:1px solid #fca5a5; background:#fff; color:#dc2626; border-radius:5px; font-size:12px; cursor:pointer; }
+    .btn-delete:hover { background:#fef2f2; }
+    .empty { text-align:center; padding:40px; color:#9ca3af; font-size:14px; }
+    .banner { display:flex; align-items:center; justify-content:space-between; gap:12px; border-radius:6px; padding:10px 16px; margin-bottom:16px; font-size:13px; transition:opacity .3s ease; }
+    .banner.hide { opacity:0; }
+    .error-banner { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; }
+    .success-banner { background:#f0fdf4; border:1px solid #86efac; color:#16a34a; }
+    .banner-close { background:none; border:none; color:inherit; font-size:16px; line-height:1; cursor:pointer; padding:0 2px; opacity:.6; }
+    .banner-close:hover { opacity:1; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:500; }
+    .badge.active   { background:#dcfce7; color:#16a34a; }
+    .badge.inactive { background:#f3f4f6; color:#6b7280; }
+    .no-key { color:#9ca3af; font-size:13px; }
+    .actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .btn { padding:5px 10px; border-radius:5px; font-size:12px; cursor:pointer; border:1px solid; }
+    .btn-issue      { border-color:#6366f1; background:#fff; color:#4f46e5; }
+    .btn-issue:hover { background:#eef2ff; }
+    .btn-activate   { border-color:#86efac; background:#fff; color:#16a34a; }
+    .btn-activate:hover { background:#f0fdf4; }
+    .btn-deactivate { border-color:#fca5a5; background:#fff; color:#dc2626; }
+    .btn-deactivate:hover { background:#fef2f2; }
+  </style>
+</head>
+<body>
+<div th:replace="~{admin/fragments :: nav()}"></div>
+<main>
+  <div class="banner error-banner" th:if="${error}">
+    <span th:text="${error}"></span>
+    <button type="button" class="banner-close" onclick="dismissBanner(this)">&times;</button>
+  </div>
+  <div class="banner success-banner" th:if="${success}">
+    <span th:text="${success}"></span>
+    <button type="button" class="banner-close" onclick="dismissBanner(this)">&times;</button>
+  </div>
+
+  <div>
+    <h2>대시보드</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="label">전체 가입자</div>
+        <div class="value" th:text="${totalMembers}">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">전체 API 키</div>
+        <div class="value" th:text="${totalApiKeys}">0</div>
+      </div>
+      <div class="stat green">
+        <div class="label">활성 API 키</div>
+        <div class="value" th:text="${activeApiKeys}">0</div>
+      </div>
+      <div class="stat blue">
+        <div class="label">오늘 API 호출</div>
+        <div class="value" th:text="${todayApiCalls}">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div th:if="${resendUsage.available()}">
+    <div class="subheading">메일 발송 현황 (Resend · 최근 30일)</div>
+    <div class="stats">
+      <div class="stat">
+        <div class="label">발송</div>
+        <div class="value" th:text="${resendUsage.sent()}">0</div>
+      </div>
+      <div class="stat green">
+        <div class="label">전달</div>
+        <div class="value" th:text="${resendUsage.delivered()}">0</div>
+      </div>
+      <div class="stat red">
+        <div class="label">반송</div>
+        <div class="value" th:text="${resendUsage.bounced()}">0</div>
+      </div>
+      <div class="stat blue">
+        <div class="label">열람</div>
+        <div class="value" th:text="${resendUsage.opened()}">0</div>
+      </div>
+      <div class="stat red">
+        <div class="label">스팸 신고</div>
+        <div class="value" th:text="${resendUsage.complained()}">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="stat-note" th:unless="${resendUsage.available()}">
+    Resend 연동이 설정되지 않아 메일 발송 현황을 표시할 수 없습니다.
+  </div>
+
+  <section>
+    <div class="section-head">
+      <span class="section-title">수동 메일 발송</span>
+      <button class="btn-add" onclick="toggleForm('mail-form')">+ 메일 발송</button>
+    </div>
+
+    <div class="add-form" id="mail-form">
+      <form method="post" action="/admin/mail/send">
+        <div class="form-row">
+          <input type="email" name="to" placeholder="받는 사람 이메일" required>
+          <input type="text" name="subject" placeholder="제목" required>
+        </div>
+        <div class="form-row" style="margin-top:10px;">
+          <textarea name="body" placeholder="본문" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">발송</button>
+          <button type="button" class="btn-cancel" onclick="toggleForm('mail-form')">취소</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-title" th:text="${#lists.isEmpty(members)} ? '멤버 없음' : (${#lists.size(members)} + '명')">0명</span>
+      <button class="btn-add" onclick="toggleForm('add-form')">+ 새 멤버 추가</button>
+    </div>
+
+    <div class="add-form" id="add-form">
+      <form method="post" action="/admin/members/create">
+        <div class="form-row">
+          <input type="email" name="email" placeholder="이메일" required>
+          <input type="text" name="affiliation" placeholder="소속명" required>
+          <input type="password" name="password" placeholder="비밀번호" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">추가</button>
+          <button type="button" class="btn-cancel" onclick="toggleForm('add-form')">취소</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="empty" th:if="${#lists.isEmpty(members)}">등록된 멤버가 없습니다.</div>
+    <table th:unless="${#lists.isEmpty(members)}">
+      <thead>
+        <tr>
+          <th>이메일</th>
+          <th>소속</th>
+          <th>API 키</th>
+          <th>오늘 호출</th>
+          <th>가입일</th>
+          <th>작업</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="m : ${members}">
+          <td th:text="${m.email}"></td>
+          <td th:text="${m.affiliation}"></td>
+          <td>
+            <span class="badge active"   th:if="${m.apiKeyStatus == 'ACTIVE'}">활성</span>
+            <span class="badge inactive" th:if="${m.apiKeyStatus == 'INACTIVE'}">비활성</span>
+            <span class="no-key" th:unless="${m.hasApiKey()}">미발급</span>
+          </td>
+          <td>
+            <span th:if="${m.hasApiKey()}" th:text="${m.dailyCallCount} + ' / ' + ${dailyLimit}"></span>
+            <span th:unless="${m.hasApiKey()}" style="color:#9ca3af;">—</span>
+          </td>
+          <td th:text="${#temporals.format(m.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+          <td>
+            <div class="actions">
+              <form th:unless="${m.hasApiKey()}" method="post"
+                    th:action="'/admin/members/' + ${m.id} + '/api-key/issue'">
+                <button type="submit" class="btn btn-issue">키 발급</button>
+              </form>
+
+              <form th:if="${m.hasApiKey() and m.apiKeyStatus == 'ACTIVE'}" method="post"
+                    th:action="'/admin/api-keys/' + ${m.apiKeyId} + '/deactivate'">
+                <button type="submit" class="btn btn-deactivate">비활성화</button>
+              </form>
+
+              <form th:if="${m.hasApiKey() and m.apiKeyStatus == 'INACTIVE'}" method="post"
+                    th:action="'/admin/api-keys/' + ${m.apiKeyId} + '/activate'">
+                <button type="submit" class="btn btn-activate">활성화</button>
+              </form>
+
+              <form method="post" th:action="'/admin/members/' + ${m.id} + '/delete'"
+                    onsubmit="return confirm('이 멤버와 API 키를 삭제하시겠습니까?')">
+                <button type="submit" class="btn-delete">삭제</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+<script>
+  function toggleForm(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'block' ? 'none' : 'block';
+  }
+
+  function dismissBanner(el) {
+    const banner = el.closest('.banner');
+    banner.classList.add('hide');
+    setTimeout(() => banner.remove(), 300);
+  }
+
+  document.querySelectorAll('.banner').forEach(banner => {
+    setTimeout(() => {
+      banner.classList.add('hide');
+      setTimeout(() => banner.remove(), 300);
+    }, 2000);
+  });
+</script>
+</body>
+</html>
