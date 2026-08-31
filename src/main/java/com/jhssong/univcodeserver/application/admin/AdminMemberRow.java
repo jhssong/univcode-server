@@ -9,9 +9,14 @@ public record AdminMemberRow(
         LocalDateTime createdAt,
         Long apiKeyId,
         String apiKeyStatus,
-        int dailyCallCount
+        int dailyCallCount,
+        LocalDateTime issuanceRequestedAt
 ) {
     public boolean hasApiKey() {
         return apiKeyId != null;
+    }
+
+    public boolean hasPendingIssuanceRequest() {
+        return issuanceRequestedAt != null;
     }
 }

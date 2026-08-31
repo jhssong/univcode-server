@@ -22,22 +22,12 @@
     h3 { font-size:14px; font-weight:600; color:#374151; margin-bottom:16px; }
     section { background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); padding:28px; }
     .empty { text-align:center; padding:40px; color:#9ca3af; font-size:14px; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:500; margin-left:8px; }
-    .badge.active   { background:#dcfce7; color:#16a34a; }
-    .badge.inactive { background:#f3f4f6; color:#6b7280; }
     .key-value-row { display:flex; align-items:center; gap:8px; }
-    .key-value { font-family:monospace; font-size:15px; color:#111; }
-    .key-value.masked { color:#9ca3af; font-style:italic; font-family:inherit; font-size:13px; }
+    .key-value { font-family:monospace; font-size:15px; color:#111; letter-spacing:0.5px; }
     .copy-btn { padding:4px 10px; border:1px solid #ddd; background:#f9fafb; border-radius:4px; font-size:12px; cursor:pointer; }
     .key-meta { margin-top:8px; font-size:12px; color:#9ca3af; }
     .reissue-btn { margin-top:14px; padding:6px 14px; border:1px solid #fca5a5; background:#fff; color:#dc2626; border-radius:6px; font-size:12px; cursor:pointer; }
     .reissue-btn:hover { background:#fef2f2; }
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:100; }
-    .modal { background:#fff; border-radius:10px; padding:28px; width:100%; max-width:420px; }
-    .modal h3 { font-size:16px; font-weight:700; margin-bottom:8px; }
-    .modal-desc { font-size:13px; color:#6b7280; margin-bottom:16px; }
-    .modal-close { width:100%; padding:10px; background:#4f46e5; color:#fff; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:16px; }
-    .modal-close:hover { background:#4338ca; }
     .usage-today { margin-top:20px; }
     .usage-label { font-size:12px; color:#6b7280; margin-bottom:6px; }
     .usage-value { font-size:13px; font-weight:600; margin-bottom:8px; }
@@ -56,8 +46,12 @@
     .banner { display:flex; align-items:center; justify-content:space-between; gap:12px; border-radius:6px; padding:10px 16px; font-size:13px; transition:opacity .3s ease; }
     .banner.hide { opacity:0; }
     .error-banner { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; }
+    .success-banner { background:#f0fdf4; border:1px solid #86efac; color:#16a34a; }
     .banner-close { background:none; border:none; color:inherit; font-size:16px; line-height:1; cursor:pointer; padding:0 2px; opacity:.6; }
     .banner-close:hover { opacity:1; }
+    .request-btn { padding:8px 18px; border:1px solid #6366f1; background:#fff; color:#4f46e5; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500; }
+    .request-btn:hover { background:#eef2ff; }
+    .pending-note { font-size:13px; color:#b45309; text-align:center; padding:20px; }
   </style>
 </head>
 <body>
@@ -75,20 +69,31 @@
     <span th:text="${error}"></span>
     <button type="button" class="banner-close" onclick="dismissBanner(this)">&times;</button>
   </div>
+  <div class="banner success-banner" th:if="${success}">
+    <span th:text="${success}"></span>
+    <button type="button" class="banner-close" onclick="dismissBanner(this)">&times;</button>
+  </div>
 
   <h2>내 API 키</h2>
 
-  <section th:if="${key == null}">
-    <div class="empty">발급된 API 키가 없습니다. 관리자에게 문의해주세요.</div>
+  <section th:if="${key == null or (key.status == 'INACTIVE' and key.issuanceRequestedAt == null)}">
+    <div class="empty">아직 발급된 API 키가 없습니다.</div>
+    <form method="post" action="/my/api-key/request" style="text-align:center; margin-top:8px;">
+      <button type="submit" class="request-btn">키 발급 요청</button>
+    </form>
   </section>
 
-  <section th:if="${key != null}">
+  <section th:if="${key != null and key.status == 'INACTIVE' and key.issuanceRequestedAt != null}">
+    <div class="pending-note">키 발급을 요청했습니다 — 관리자 확인을 기다리는 중입니다.</div>
+  </section>
+
+  <section th:if="${key != null and key.status == 'ACTIVE'}">
     <div class="key-value-row">
-      <span class="key-value masked">키는 발급 시 한 번만 표시됩니다</span>
-      <span class="badge active"   th:if="${key.status == 'ACTIVE'}">활성</span>
-      <span class="badge inactive" th:if="${key.status == 'INACTIVE'}">비활성</span>
+      <span class="key-value" id="kv" th:attr="data-full=${key.keyValue}"></span>
+      <button class="copy-btn" onclick="copyKey()">복사</button>
     </div>
     <div class="key-meta" th:text="'발급일 ' + ${#temporals.format(key.createdAt, 'yyyy-MM-dd')}"></div>
+
     <form method="post" action="/my/api-key/reissue"
           onsubmit="return confirm('재발급하면 기존 키는 즉시 사용할 수 없게 됩니다. 계속할까요?')">
       <button type="submit" class="reissue-btn">키 재발급</button>
@@ -149,25 +154,16 @@
   </section>
 </main>
 
-<div class="modal-overlay" id="keyModal" th:if="${newApiKey}">
-  <div class="modal">
-    <h3>API 키가 발급됐습니다</h3>
-    <p class="modal-desc">이 키는 지금 한 번만 표시됩니다. 안전한 곳에 복사해두세요.</p>
-    <div class="key-value-row">
-      <span class="key-value" id="newKv" th:text="${newApiKey}"></span>
-      <button class="copy-btn" onclick="copyNewKey()">복사</button>
-    </div>
-    <button class="modal-close" onclick="closeKeyModal()">확인했습니다</button>
-  </div>
-</div>
-
 <script>
-  function copyNewKey() {
-    navigator.clipboard.writeText(document.getElementById('newKv').textContent)
-      .then(() => alert('복사됐습니다.'));
+  const kv = document.getElementById('kv');
+  if (kv) {
+    const full = kv.getAttribute('data-full');
+    kv.textContent = full.slice(0, 5) + '*'.repeat(Math.max(full.length - 5, 0));
   }
-  function closeKeyModal() {
-    document.getElementById('keyModal').remove();
+
+  function copyKey() {
+    const full = document.getElementById('kv').getAttribute('data-full');
+    navigator.clipboard.writeText(full).then(() => alert('복사됐습니다.'));
   }
 
   function dismissBanner(el) {

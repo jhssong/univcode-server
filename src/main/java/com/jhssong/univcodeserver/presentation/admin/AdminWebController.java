@@ -2,6 +2,7 @@ package com.jhssong.univcodeserver.presentation.admin;
 
 import com.jhssong.univcodeserver.application.admin.AdminLoginAttemptService;
 import com.jhssong.univcodeserver.application.admin.AdminMailService;
+import com.jhssong.univcodeserver.application.admin.AdminMemberRow;
 import com.jhssong.univcodeserver.application.admin.AdminService;
 import com.jhssong.univcodeserver.application.apikey.RateLimitService;
 import com.jhssong.univcodeserver.application.resend.ResendMetricsService;
@@ -13,6 +14,7 @@ import com.jhssong.univcodeserver.global.config.AdminProperties;
 import com.jhssong.univcodeserver.global.exception.CustomException;
 import com.jhssong.univcodeserver.global.logging.ClientIpUtils;
 import java.time.LocalDate;
+import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -78,11 +80,15 @@ public class AdminWebController {
 
     @GetMapping({"", "/dashboard"})
     public String dashboard(Model model) {
+        List<AdminMemberRow> members = adminService.findAllMembers();
         model.addAttribute("totalMembers", memberRepository.count());
         model.addAttribute("totalApiKeys", apiKeyRepository.count());
         model.addAttribute("activeApiKeys", apiKeyRepository.countByStatus(ApiKeyStatus.ACTIVE));
         model.addAttribute("todayApiCalls", apiKeyRepository.sumDailyCallCountByDate(LocalDate.now()));
-        model.addAttribute("members", adminService.findAllMembers());
+        model.addAttribute("members", members);
+        model.addAttribute("pendingRequests", members.stream()
+                .filter(AdminMemberRow::hasPendingIssuanceRequest)
+                .toList());
         model.addAttribute("dailyLimit", RateLimitService.DAILY_LIMIT);
         model.addAttribute("resendUsage", resendMetricsService.getUsage(30));
         return "admin/dashboard";
@@ -121,20 +127,20 @@ public class AdminWebController {
         return "redirect:/admin/dashboard";
     }
 
-    @PostMapping("/api-keys/{id}/activate")
-    public String activate(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    @PostMapping("/api-keys/{id}/approve")
+    public String approve(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            adminService.activateApiKey(id);
+            adminService.approveApiKey(id);
         } catch (CustomException e) {
             redirectAttributes.addFlashAttribute("error", e.getErrorCode().getMessage());
         }
         return "redirect:/admin/dashboard";
     }
 
-    @PostMapping("/api-keys/{id}/deactivate")
-    public String deactivate(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    @PostMapping("/api-keys/{id}/revoke")
+    public String revoke(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            adminService.deactivateApiKey(id);
+            adminService.revokeApiKey(id);
         } catch (CustomException e) {
             redirectAttributes.addFlashAttribute("error", e.getErrorCode().getMessage());
         }

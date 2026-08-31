@@ -3,7 +3,6 @@ package com.jhssong.univcodeserver.presentation.member;
 import com.jhssong.univcodeserver.application.apikey.ApiKeyService;
 import com.jhssong.univcodeserver.application.apikey.ApiKeyUsageService;
 import com.jhssong.univcodeserver.application.member.MemberService;
-import com.jhssong.univcodeserver.application.member.SignupResult;
 import com.jhssong.univcodeserver.domain.member.entity.Member;
 import com.jhssong.univcodeserver.domain.member.repository.MemberRepository;
 import com.jhssong.univcodeserver.global.auth.MemberWebInterceptor;
@@ -45,16 +44,15 @@ public class MemberWebController {
     @PostMapping("/signup")
     public String signup(@RequestParam String email, @RequestParam String affiliation,
                          @RequestParam String password, HttpServletRequest request,
-                         Model model, RedirectAttributes redirectAttributes) {
-        SignupResult result;
+                         Model model) {
+        Long memberId;
         try {
-            result = memberService.signup(new MemberSignupRequest(email, affiliation, password));
+            memberId = memberService.signup(new MemberSignupRequest(email, affiliation, password));
         } catch (CustomException e) {
             model.addAttribute("error", e.getErrorCode().getMessage());
             return "member/signup";
         }
-        request.getSession(true).setAttribute(MemberWebInterceptor.SESSION_KEY, result.memberId());
-        redirectAttributes.addFlashAttribute("newApiKey", result.apiKey());
+        request.getSession(true).setAttribute(MemberWebInterceptor.SESSION_KEY, memberId);
         return "redirect:/my";
     }
 
@@ -102,8 +100,20 @@ public class MemberWebController {
     public String reissueApiKey(HttpServletRequest request, RedirectAttributes redirectAttributes) {
         Long memberId = (Long) request.getAttribute(MemberWebInterceptor.MEMBER_ID_ATTR);
         try {
-            ApiKeyResponse response = apiKeyService.reissue(memberId);
-            redirectAttributes.addFlashAttribute("newApiKey", response.keyValue());
+            apiKeyService.reissue(memberId);
+            redirectAttributes.addFlashAttribute("success", "키를 재발급했습니다.");
+        } catch (CustomException e) {
+            redirectAttributes.addFlashAttribute("error", e.getErrorCode().getMessage());
+        }
+        return "redirect:/my";
+    }
+
+    @PostMapping("/my/api-key/request")
+    public String requestIssuance(HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        Long memberId = (Long) request.getAttribute(MemberWebInterceptor.MEMBER_ID_ATTR);
+        try {
+            apiKeyService.requestIssuance(memberId, request);
+            redirectAttributes.addFlashAttribute("success", "키 발급을 요청했습니다. 관리자 확인 후 처리됩니다.");
         } catch (CustomException e) {
             redirectAttributes.addFlashAttribute("error", e.getErrorCode().getMessage());
         }

@@ -39,7 +39,8 @@ public class AdminService {
                             m.getCreatedAt(),
                             key != null ? key.getId() : null,
                             key != null ? key.getStatus().name() : null,
-                            key != null ? key.getDailyCallCount() : 0);
+                            key != null ? key.getDailyCallCount() : 0,
+                            key != null ? key.getIssuanceRequestedAt() : null);
                 })
                 .toList();
     }
@@ -81,17 +82,17 @@ public class AdminService {
     }
 
     @Transactional
-    public void activateApiKey(Long id) {
+    public void approveApiKey(Long id) {
         apiKeyRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.API_KEY_NOT_FOUND))
-                .activate();
+                .approve();
     }
 
     @Transactional
-    public void deactivateApiKey(Long id) {
+    public void revokeApiKey(Long id) {
         apiKeyRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.API_KEY_NOT_FOUND))
-                .deactivate();
+                .revoke();
     }
 
     @Transactional

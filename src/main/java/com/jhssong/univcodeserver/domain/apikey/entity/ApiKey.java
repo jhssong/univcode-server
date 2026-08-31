@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -49,6 +50,9 @@ public class ApiKey extends BaseTimeEntity {
     @Column
     private LocalDate callCountDate;
 
+    @Column
+    private LocalDateTime issuanceRequestedAt;
+
     @Builder
     public ApiKey(Member member, String keyValue, String purpose, ApiKeyStatus status) {
         this.member = member;
@@ -61,12 +65,17 @@ public class ApiKey extends BaseTimeEntity {
         return status == ApiKeyStatus.ACTIVE;
     }
 
-    public void activate() {
+    public void approve() {
         this.status = ApiKeyStatus.ACTIVE;
+        this.issuanceRequestedAt = null;
     }
 
-    public void deactivate() {
+    public void revoke() {
         this.status = ApiKeyStatus.INACTIVE;
+    }
+
+    public void markIssuanceRequested() {
+        this.issuanceRequestedAt = LocalDateTime.now();
     }
 
     public void reissue(String keyValue) {
@@ -74,6 +83,7 @@ public class ApiKey extends BaseTimeEntity {
         this.status = ApiKeyStatus.ACTIVE;
         this.dailyCallCount = 0;
         this.callCountDate = null;
+        this.issuanceRequestedAt = null;
     }
 
     public void resetDailyCount(LocalDate date) {

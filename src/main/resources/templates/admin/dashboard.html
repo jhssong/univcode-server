@@ -52,18 +52,13 @@
     .success-banner { background:#f0fdf4; border:1px solid #86efac; color:#16a34a; }
     .banner-close { background:none; border:none; color:inherit; font-size:16px; line-height:1; cursor:pointer; padding:0 2px; opacity:.6; }
     .banner-close:hover { opacity:1; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:500; }
-    .badge.active   { background:#dcfce7; color:#16a34a; }
-    .badge.inactive { background:#f3f4f6; color:#6b7280; }
-    .no-key { color:#9ca3af; font-size:13px; }
     .actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
     .btn { padding:5px 10px; border-radius:5px; font-size:12px; cursor:pointer; border:1px solid; }
-    .btn-issue      { border-color:#6366f1; background:#fff; color:#4f46e5; }
-    .btn-issue:hover { background:#eef2ff; }
-    .btn-activate   { border-color:#86efac; background:#fff; color:#16a34a; }
-    .btn-activate:hover { background:#f0fdf4; }
-    .btn-deactivate { border-color:#fca5a5; background:#fff; color:#dc2626; }
-    .btn-deactivate:hover { background:#fef2f2; }
+    .btn-approve   { border-color:#86efac; background:#fff; color:#16a34a; }
+    .btn-approve:hover { background:#f0fdf4; }
+    .btn-revoke { border-color:#fca5a5; background:#fff; color:#dc2626; }
+    .btn-revoke:hover { background:#fef2f2; }
+    .pending-section { border:1px solid #fde68a; background:#fffbeb; }
   </style>
 </head>
 <body>
@@ -129,6 +124,34 @@
     Resend 연동이 설정되지 않아 메일 발송 현황을 표시할 수 없습니다.
   </div>
 
+  <section class="pending-section" th:if="${!#lists.isEmpty(pendingRequests)}">
+    <div class="section-head">
+      <span class="section-title">🔔 API 키 발급 요청 (<span th:text="${#lists.size(pendingRequests)}">0</span>건)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>이메일</th>
+          <th>소속</th>
+          <th>요청 시각</th>
+          <th>작업</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="m : ${pendingRequests}">
+          <td th:text="${m.email}"></td>
+          <td th:text="${m.affiliation}"></td>
+          <td th:text="${#temporals.format(m.issuanceRequestedAt, 'yyyy-MM-dd HH:mm')}"></td>
+          <td>
+            <form method="post" th:action="'/admin/api-keys/' + ${m.apiKeyId} + '/approve'">
+              <button type="submit" class="btn btn-approve">발급</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
   <section>
     <div class="section-head">
       <span class="section-title">수동 메일 발송</span>
@@ -178,7 +201,6 @@
         <tr>
           <th>이메일</th>
           <th>소속</th>
-          <th>API 키</th>
           <th>오늘 호출</th>
           <th>가입일</th>
           <th>작업</th>
@@ -189,11 +211,6 @@
           <td th:text="${m.email}"></td>
           <td th:text="${m.affiliation}"></td>
           <td>
-            <span class="badge active"   th:if="${m.apiKeyStatus == 'ACTIVE'}">활성</span>
-            <span class="badge inactive" th:if="${m.apiKeyStatus == 'INACTIVE'}">비활성</span>
-            <span class="no-key" th:unless="${m.hasApiKey()}">미발급</span>
-          </td>
-          <td>
             <span th:if="${m.hasApiKey()}" th:text="${m.dailyCallCount} + ' / ' + ${dailyLimit}"></span>
             <span th:unless="${m.hasApiKey()}" style="color:#9ca3af;">—</span>
           </td>
@@ -202,17 +219,17 @@
             <div class="actions">
               <form th:unless="${m.hasApiKey()}" method="post"
                     th:action="'/admin/members/' + ${m.id} + '/api-key/issue'">
-                <button type="submit" class="btn btn-issue">키 발급</button>
+                <button type="submit" class="btn btn-approve">발급</button>
               </form>
 
               <form th:if="${m.hasApiKey() and m.apiKeyStatus == 'ACTIVE'}" method="post"
-                    th:action="'/admin/api-keys/' + ${m.apiKeyId} + '/deactivate'">
-                <button type="submit" class="btn btn-deactivate">비활성화</button>
+                    th:action="'/admin/api-keys/' + ${m.apiKeyId} + '/revoke'">
+                <button type="submit" class="btn btn-revoke">발급취소</button>
               </form>
 
               <form th:if="${m.hasApiKey() and m.apiKeyStatus == 'INACTIVE'}" method="post"
-                    th:action="'/admin/api-keys/' + ${m.apiKeyId} + '/activate'">
-                <button type="submit" class="btn btn-activate">활성화</button>
+                    th:action="'/admin/api-keys/' + ${m.apiKeyId} + '/approve'">
+                <button type="submit" class="btn btn-approve">발급</button>
               </form>
 
               <form method="post" th:action="'/admin/members/' + ${m.id} + '/delete'"
