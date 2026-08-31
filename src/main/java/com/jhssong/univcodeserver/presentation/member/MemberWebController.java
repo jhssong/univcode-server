@@ -32,6 +32,11 @@ public class MemberWebController {
     private final ApiKeyService apiKeyService;
     private final ApiKeyUsageService apiKeyUsageService;
 
+    @GetMapping("/")
+    public String root() {
+        return "redirect:/my";
+    }
+
     @GetMapping("/signup")
     public String signupPage() {
         return "member/signup";
