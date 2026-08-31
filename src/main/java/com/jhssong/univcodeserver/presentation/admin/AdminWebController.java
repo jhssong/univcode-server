@@ -1,5 +1,6 @@
 package com.jhssong.univcodeserver.presentation.admin;
 
+import com.jhssong.univcodeserver.application.admin.AdminLoginAttemptService;
 import com.jhssong.univcodeserver.application.admin.AdminMailService;
 import com.jhssong.univcodeserver.application.admin.AdminService;
 import com.jhssong.univcodeserver.application.apikey.RateLimitService;
@@ -10,10 +11,12 @@ import com.jhssong.univcodeserver.domain.member.repository.MemberRepository;
 import com.jhssong.univcodeserver.global.auth.AdminAuthInterceptor;
 import com.jhssong.univcodeserver.global.config.AdminProperties;
 import com.jhssong.univcodeserver.global.exception.CustomException;
+import com.jhssong.univcodeserver.global.logging.ClientIpUtils;
 import java.time.LocalDate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +34,8 @@ public class AdminWebController {
     private final AdminProperties adminProperties;
     private final AdminService adminService;
     private final AdminMailService adminMailService;
+    private final AdminLoginAttemptService adminLoginAttemptService;
+    private final PasswordEncoder passwordEncoder;
     private final MemberRepository memberRepository;
     private final ApiKeyRepository apiKeyRepository;
     private final ResendMetricsService resendMetricsService;
@@ -45,11 +50,19 @@ public class AdminWebController {
     @PostMapping("/login")
     public String login(@RequestParam String username, @RequestParam String password,
                         HttpServletRequest request, Model model) {
-        if (adminProperties.getUsername().equals(username) && adminProperties.getPassword().equals(password)) {
+        String ip = ClientIpUtils.clientIp(request);
+        if (adminLoginAttemptService.isBlocked(ip)) {
+            model.addAttribute("error", "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            return "admin/login";
+        }
+        if (adminProperties.getUsername().equals(username)
+                && passwordEncoder.matches(password, adminProperties.getPassword())) {
+            adminLoginAttemptService.recordSuccess(ip);
             HttpSession session = request.getSession(true);
             session.setAttribute(AdminAuthInterceptor.SESSION_KEY, true);
             return "redirect:/admin/dashboard";
         }
+        adminLoginAttemptService.recordFailure(ip, request);
         model.addAttribute("error", "아이디 또는 비밀번호가 올바르지 않습니다.");
         return "admin/login";
     }
