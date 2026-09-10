@@ -6,6 +6,8 @@ server:
         secure: ${SESSION_COOKIE_SECURE:false}
 
 spring:
+  application:
+    name: univcode-server
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -64,8 +66,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, prometheus
   endpoint:
     health:
       probes:
         enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
