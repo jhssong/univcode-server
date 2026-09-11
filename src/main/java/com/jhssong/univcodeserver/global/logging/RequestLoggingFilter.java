@@ -24,7 +24,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
-        return "/actuator/health".equals(request.getRequestURI());
+        return request.getRequestURI().startsWith("/actuator");
     }
 
     @Override
